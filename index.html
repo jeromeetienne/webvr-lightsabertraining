@@ -165,6 +165,7 @@ function init() {
 		// return
 		// debugger
 		if( controller1.lastGamepad === null )	return
+		
 		var button = controller1.lastGamepad.buttons[1]
 		// console.log('button', button.pressed)
 		if( button.value === 0 ){
@@ -181,6 +182,9 @@ function init() {
 			playSound('sound_off')
 			laserBeam.object3d.visible = false
 		}else{
+			if(laserBeam.object3d.visible === false ){
+				playSound('sound_on')
+			}
 			laserBeam.object3d.visible = true
 		}
 
@@ -251,7 +255,7 @@ function init() {
 			// copy old position
 			oldPosition.copy(position)
 			function playSound(domId){
-	console.log('playSound', domId)
+	// console.log('playSound', domId)
 				document.getElementById(domId).play();
 				swinging	= true;
 				setTimeout(function(){ swinging = false }, 700);
@@ -319,6 +323,5 @@ function render() {
 
 }
 
-		</script>
-	</body>
+</script></body>
 </html>
