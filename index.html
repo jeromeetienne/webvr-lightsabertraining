@@ -135,7 +135,6 @@ function init() {
 			// enemyObject.position.x -= 0.1
 			lastJumpAt = Date.now()
 		}
-		
 	})
 	
 	onRenderFcts.push(function(){
@@ -162,18 +161,13 @@ function init() {
 
 	// honor button press to put the ray
 	onRenderFcts.push(function(){
-		// return
-		// debugger
 		if( controller1.lastGamepad === null )	return
 		
 		var button = controller1.lastGamepad.buttons[1]
-		// console.log('button', button.pressed)
 		if( button.value === 0 ){
-			// laserBeam.object3d.visible = true
 			laserBeam.object3d.scale.x = laserBeam.object3d.scale.x * (1-0.5) + (0.5)*button.value
 		}else{
 			laserBeam.object3d.scale.x = laserBeam.object3d.scale.x * (1-0.1) + (0.1)*button.value
-			// laserBeam.object3d.visible = true
 		}
 		laserBeam.object3d.scale.x = Math.max(laserBeam.object3d.scale.x, 0.0001)
 		
@@ -191,41 +185,38 @@ function init() {
 	})
 
 	//////////////////////////////////////////////////////////////////////////////
-	//              Code Separator
+	//              intersection lightSaber and enemyObject
 	//////////////////////////////////////////////////////////////////////////////
-	
-	;(function(){
-		onRenderFcts.push(function(){
-			if( laserBeam.object3d.visible === false ){
-				enemyObject.material.color.set('lightblue')			
-				return
-			}
-			var start = laserBeam.object3d.localToWorld(new THREE.Vector3(0,0,0))
-			var end = laserBeam.object3d.localToWorld(new THREE.Vector3(1,0,0))
-			var line3 = new THREE.Line3
-			line3.set(start, end)
-			
-			var enemyPoint = enemyObject.position.clone()
-			
-			var closestPoint = line3.closestPointToPoint(enemyPoint, true)
-			var distance = closestPoint.distanceTo(enemyPoint)
-			if( distance < enemyObject.geometry.parameters.radius + laserBeam.object3d.scale.y*0.1 ){
-				enemyObject.material.color.set('red')
-				enemyObject.position.set(0, 1, 0.2)
-				enemyObject.position.x += THREE.Math.randFloatSpread(0.5)*2
-				enemyObject.position.y += THREE.Math.randFloatSpread(0.5)*2
-				enemyObject.userData.targetPosition.copy(enemyObject.position)
-			}else{
-				enemyObject.material.color.set('lightblue')			
-			}
-		})
-	})()
 
-// onRenderFcts.push(function(delta, now){
-// 	var object3d	= laserBeam.object3d
-// 	object3d.rotation.x	+= 1 * delta;
-// 	object3d.rotation.y	+= 0.01 * delta;		
-// })
+	onRenderFcts.push(function(){
+		if( laserBeam.object3d.visible === false ){
+			enemyObject.material.color.set('lightblue')			
+			return
+		}
+		var start = laserBeam.object3d.localToWorld(new THREE.Vector3(0,0,0))
+		var end = laserBeam.object3d.localToWorld(new THREE.Vector3(1,0,0))
+		var line3 = new THREE.Line3
+		line3.set(start, end)
+		
+		var enemyPoint = enemyObject.position.clone()
+		
+		var closestPoint = line3.closestPointToPoint(enemyPoint, true)
+		var distance = closestPoint.distanceTo(enemyPoint)
+		if( distance < enemyObject.geometry.parameters.radius + laserBeam.object3d.scale.y*0.1 ){
+			enemyObject.material.color.set('red')
+			enemyObject.position.set(0, 1, 0.2)
+			enemyObject.position.x += THREE.Math.randFloatSpread(0.5)*2
+			enemyObject.position.y += THREE.Math.randFloatSpread(0.5)*2
+			enemyObject.userData.targetPosition.copy(enemyObject.position)
+		}else{
+			enemyObject.material.color.set('lightblue')			
+		}
+	})
+
+
+	//////////////////////////////////////////////////////////////////////////////
+	//		sound based on controller1 move - BUGGY 
+	//////////////////////////////////////////////////////////////////////////////
 	;(function(){
 	return
 		// from @sylvainpv sylvain pollet - https://twitter.com/SylvainPV/status/236255017508671488
