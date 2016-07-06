@@ -38,27 +38,19 @@
 
 		<script>
 
-if ( WEBVR.isLatestAvailable() === false ) {
+	if ( WEBVR.isLatestAvailable() === false ) {
+		document.body.appendChild( WEBVR.getMessage() );
+	}
 
-	document.body.appendChild( WEBVR.getMessage() );
+	//////////////////////////////////////////////////////////////////////////////
+	//		Code Separator
+	//////////////////////////////////////////////////////////////////////////////
 
-}
+	var notInVive = true
+	var onRenderFcts = []
 
-//
 
-var container;
-var camera, scene, renderer;
-var effect, controls;
-var controller1, controller2;
-
-var room;
-
-init();
-animate();
-
-function init() {
-
-	container = document.createElement( 'div' );
+	var container = document.createElement( 'div' );
 	document.body.appendChild( container );
 
 	var info = document.createElement( 'div' );
@@ -69,12 +61,11 @@ function init() {
 	info.innerHTML = '<a href="http://threejs.org" target="_blank">three.js</a> webgl - htc vive';
 	container.appendChild( info );
 
-	scene = new THREE.Scene();
-
-	camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 10 );
+	var scene = new THREE.Scene();
+	var camera = new THREE.PerspectiveCamera( 70, window.innerWidth / window.innerHeight, 0.1, 10 );
 	scene.add( camera );
 
-	room = new THREE.Mesh(
+	var room = new THREE.Mesh(
 		new THREE.BoxGeometry( 6, 6, 6, 10, 10, 10 ),
 		new THREE.MeshBasicMaterial( { color: 0x202020, wireframe: true } )
 	);
@@ -89,25 +80,38 @@ function init() {
 
 	//
 
-	renderer = new THREE.WebGLRenderer( { antialias: true } );
+	var renderer = new THREE.WebGLRenderer( { antialias: true } );
 	renderer.setClearColor( 0x101010 );
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	renderer.sortObjects = false;
 	container.appendChild( renderer.domElement );
 
-	controls = new THREE.VRControls( camera );
-	controls.standing = true;
+	var controls = new THREE.VRControls( camera );
+	controls.standing = true;	
 
-	// controllers
+	//////////////////////////////////////////////////////////////////////////////
+	//		Code Separator
+	//////////////////////////////////////////////////////////////////////////////
+if( notInVive === false ){
+	var viveController = new THREE.ViveController( 0 );
+	viveController.standingMatrix = controls.getStandingMatrix();
+	scene.add( viveController );
+}else{
+	var viveController = new THREE.Group()
+	scene.add(viveController)	
+	
+	onRenderFcts.push(function(){
+		var position = camera.localToWorld(new THREE.Vector3(-0.2,0,-0.4))
+		viveController.position.copy(position)
+		
+		viveController.quaternion.copy( camera.getWorldQuaternion() )
+		viveController.rotateY(-Math.PI/8)
+		viveController.rotateX(Math.PI/12)
+	})
+}
 
-	controller1 = new THREE.ViveController( 0 );
-	controller1.standingMatrix = controls.getStandingMatrix();
-	scene.add( controller1 );
 
-
-	var onRenderFcts = []
-	window.onRenderFcts = onRenderFcts
 	
 	//////////////////////////////////////////////////////////////////////////////
 	//              Code Separator
@@ -122,7 +126,8 @@ function init() {
 	enemyObject.position.set(0, 1,0.2)
 	scene.add(enemyObject)
 	window.enemyObject = enemyObject
-	
+
+	// periodic repositioning
 	enemyObject.userData.targetPosition = new THREE.Vector3().copy(enemyObject.position);
 	var lastJumpAt = Date.now()
 	onRenderFcts.push(function(){
@@ -137,14 +142,14 @@ function init() {
 		}
 	})
 	
+	// tweening enemyObject.position to targetPosition
 	onRenderFcts.push(function(){
-		var strengh = 0.2
+		var tweenStrengh = 0.2
 		var targetPosition = enemyObject.userData.targetPosition
-		enemyObject.position.x = enemyObject.position.x * (1-strengh) + targetPosition.x * (strengh)
-		enemyObject.position.y = enemyObject.position.y * (1-strengh) + targetPosition.y * (strengh)
-		enemyObject.position.z = enemyObject.position.z * (1-strengh) + targetPosition.z * (strengh)
+		enemyObject.position.x = enemyObject.position.x * (1-tweenStrengh) + targetPosition.x * (tweenStrengh)
+		enemyObject.position.y = enemyObject.position.y * (1-tweenStrengh) + targetPosition.y * (tweenStrengh)
+		enemyObject.position.z = enemyObject.position.z * (1-tweenStrengh) + targetPosition.z * (tweenStrengh)
 	})
-
 })()
 	
 	//////////////////////////////////////////////////////////////////////////////
@@ -157,13 +162,21 @@ function init() {
 	window.laserBeam = laserBeam
 	laserBeam.object3d.position.y = -0.03
 	laserBeam.object3d.scale.set(1,0.8,0.8)
-	controller1.add(laserBeam.object3d)
+	viveController.add(laserBeam.object3d)		
 
 	// honor button press to put the ray
 	onRenderFcts.push(function(){
-		if( controller1.lastGamepad === null )	return
-		
-		var button = controller1.lastGamepad.buttons[1]
+// return
+		if( notInVive === false ){
+			if( viveController.lastGamepad === null )	return
+			
+			var button = viveController.lastGamepad.buttons[1]
+		} else {
+			var button = {
+				value : 1
+			}
+		}
+
 		if( button.value === 0 ){
 			laserBeam.object3d.scale.x = laserBeam.object3d.scale.x * (1-0.5) + (0.5)*button.value
 		}else{
@@ -215,7 +228,7 @@ function init() {
 
 
 	//////////////////////////////////////////////////////////////////////////////
-	//		sound based on controller1 move - BUGGY 
+	//		sound based on viveController move - BUGGY 
 	//////////////////////////////////////////////////////////////////////////////
 	;(function(){
 	return
@@ -224,7 +237,7 @@ function init() {
 		var oldPosition	= new THREE.Vector3;
 		var swinging		= false;
 		onRenderFcts.push(function(){
-			var object3D	= controller1;
+			var object3D	= viveController;
 			var position	= new THREE.Vector3().setFromMatrixPosition(object3D.matrixWorld);
 
 			if( swinging === true ){
@@ -266,7 +279,7 @@ function init() {
 		controller.material.map = loader.load( 'onepointfive_texture.png' );
 		controller.material.specularMap = loader.load( 'onepointfive_spec.png' );
 
-		controller1.add( object.clone() );
+		viveController.add( object.clone() );
 	} );
 
 	effect = new THREE.VREffect( renderer );
@@ -279,29 +292,54 @@ function init() {
 
 	//
 
+	//////////////////////////////////////////////////////////////////////////////
+	//		Code Separator
+	//////////////////////////////////////////////////////////////////////////////
 	window.addEventListener( 'resize', onWindowResize, false );
 
-}
+	function onWindowResize() {
 
-function onWindowResize() {
+		camera.aspect = window.innerWidth / window.innerHeight;
+		camera.updateProjectionMatrix();
 
-	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
+		effect.setSize( window.innerWidth, window.innerHeight );
 
-	effect.setSize( window.innerWidth, window.innerHeight );
+	}
 
-}
+//////////////////////////////////////////////////////////////////////////////
+//		Handle requestPointerLock
+//////////////////////////////////////////////////////////////////////////////
+renderer.domElement.addEventListener('click', function(){
+	var element = renderer.domElement
+	// check it is the proper click
+	if( event.target !== element )	return
+	// Ask the browser to lock the pointer
+	element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+	if ( /Firefox/i.test( navigator.userAgent ) ) {
+		var fullscreenchange = function ( event ) {
+			if ( document.fullscreenElement === element || document.mozFullscreenElement === element || document.mozFullScreenElement === element ) {
+				document.removeEventListener( 'fullscreenchange', fullscreenchange );
+				document.removeEventListener( 'mozfullscreenchange', fullscreenchange );
+				element.requestPointerLock();
+			}
+		};
+		document.addEventListener( 'fullscreenchange', fullscreenchange, false );
+		document.addEventListener( 'mozfullscreenchange', fullscreenchange, false );
+		element.requestFullscreen = element.requestFullscreen || element.mozRequestFullscreen || element.mozRequestFullScreen || element.webkitRequestFullscreen;
+		element.requestFullscreen();
+	} else {
+		element.requestPointerLock();
+	}
+});
 
-//
 
-function animate() {
+//////////////////////////////////////////////////////////////////////////////
+//		Code Separator
+//////////////////////////////////////////////////////////////////////////////
+
+(function animate() {
 
 	requestAnimationFrame( animate );
-	render();
-
-}
-
-function render() {
 
 	controls.update();
 	
@@ -311,8 +349,8 @@ function render() {
 
 
 	effect.render( scene, camera );
+})()
 
-}
 
 </script></body>
 </html>
